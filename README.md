@@ -7,6 +7,8 @@ Usage
 --------------
 You can use `python pycrypto.py` to generate pem key, and for the detail usage use `rsa -h`
 
-> $make
-> $rsa -h
-> $python pycrypto.py
+```
+# make
+# rsa -h
+# python pycrypto.py
+```
