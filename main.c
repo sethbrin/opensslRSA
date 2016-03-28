@@ -77,6 +77,7 @@ static void decrypt_file(args_t* args)
   char writebuf[KEY_SIZE] = {};
 
   int result;
+  int ind;
   while (1)
   {
     result = fread(buf, sizeof(char), ENCRYPT_BUF_SIZE, args->in_file);
@@ -87,7 +88,10 @@ static void decrypt_file(args_t* args)
     if ((result = private_decrypt(buf, sizeof(buf), args->rsa, writebuf)) != -1)
     {
       //fwrite(writebuf, sizeof(char), result, args->out_file);
-      fprintf(args->out_file, writebuf);
+      ind = 0;
+      // remove the preceding \0's
+      while (writebuf[ind++] == '\0');
+      fprintf(args->out_file, writebuf+ind-1);
     }
     else
     {
