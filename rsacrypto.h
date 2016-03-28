@@ -3,7 +3,7 @@
 
 // rsa encrypt and decrypt
 //
-// Author: Ping Zeng(zengping@ncic.ac.cn)
+// Author: Ping Zeng(zengping10212044@gmail.com)
 //
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
