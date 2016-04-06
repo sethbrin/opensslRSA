@@ -18,6 +18,7 @@ Usage
 You can use `python pycrypto.py` to generate pem key, and for the detail usage use `rsa -h`.
 
 ```
+ cd base64 && make
  make
  rsa -h
  rsa -i input -o cypher -k pubkey // encrypt a text file
