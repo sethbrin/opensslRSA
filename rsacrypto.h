@@ -13,9 +13,9 @@
 #include <openssl/err.h>
 #include <stdio.h>
 
-int padding = RSA_NO_PADDING;
+static int padding = RSA_NO_PADDING;
 
-RSA * createRSAFromFile(unsigned char *filename, int public)
+static RSA * createRSAFromFile(unsigned char *filename, int public)
 {
   RSA *rsa= NULL;
   BIO *keybio ;
@@ -43,7 +43,7 @@ RSA * createRSAFromFile(unsigned char *filename, int public)
 
 }
 
-RSA * createRSA(unsigned char * key,int public)
+static RSA * createRSA(unsigned char * key,int public)
 {
   RSA *rsa= NULL;
   BIO *keybio ;
@@ -69,18 +69,19 @@ RSA * createRSA(unsigned char * key,int public)
   return rsa;
 }
 
-int public_encrypt(unsigned char * data,int data_len, RSA* rsa, unsigned char *encrypted)
+static int public_encrypt(unsigned char * data,int data_len, RSA* rsa, unsigned char *encrypted)
 {
   int result = RSA_public_encrypt(data_len,data,encrypted,rsa,padding);
   return result;
 }
-int private_decrypt(unsigned char * enc_data,int data_len, RSA* rsa, unsigned char *decrypted)
+
+static int private_decrypt(unsigned char * enc_data,int data_len, RSA* rsa, unsigned char *decrypted)
 {
   int  result = RSA_private_decrypt(data_len,enc_data,decrypted,rsa,padding);
   return result;
 }
 
-void printLastError(char *msg)
+static void printLastError(char *msg)
 {
   char * err = malloc(130);;
   ERR_load_crypto_strings();

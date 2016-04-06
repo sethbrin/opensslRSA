@@ -4,3 +4,4 @@
 !Makefile
 !.gitignore
 !*.py
+!base64

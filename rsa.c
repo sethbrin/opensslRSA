@@ -1,18 +1,14 @@
 //
-// use rsa and base64 to encrypt and decrypt text FILE
+// use rsa to encrypt and decrypt text FILE
 //
 // Author: Ping Zeng(zengping1021244@gmail.com)
 //
+// Usage: rsa -h
 //
-#include <unistd.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <getopt.h>
 #include "rsacrypto.h"
-#include "base64/include/libbase64.h"
-
-// pipeline fd
-static int pipedes[2];
 
 typedef struct _args_t {
   FILE* in_file;
@@ -23,7 +19,6 @@ typedef struct _args_t {
 
 #define KEY_SIZE 2048
 #define ENCRYPT_BUF_SIZE (KEY_SIZE/8)
-
 
 static void usage(args_t *args)
 {
@@ -46,7 +41,7 @@ static void usage(args_t *args)
     exit(-1);
 }
 
-static void encrypt_rsa(args_t* args)
+static void encrypt_file(args_t* args)
 {
   // each time we encrypt ENCRYPT_BUF_SIZE bytes
   //char buf[ENCRYPT_BUF_SIZE] = {};
@@ -56,7 +51,7 @@ static void encrypt_rsa(args_t* args)
 
   while (1)
   {
-    result = read(pipedes[0], buf, ENCRYPT_BUF_SIZE);
+    result = fread(buf, sizeof(char), ENCRYPT_BUF_SIZE, args->in_file);
     if (result <= 0)
     {
       break;
@@ -75,7 +70,7 @@ static void encrypt_rsa(args_t* args)
   }
 }
 
-static void decrypt_rsa(args_t* args)
+static void decrypt_file(args_t* args)
 {
   // each time we decrypt KEY_SIZE bytes
   char buf[ENCRYPT_BUF_SIZE] = {};
@@ -96,7 +91,7 @@ static void decrypt_rsa(args_t* args)
       ind = 0;
       // remove the preceding \0's
       while (writebuf[ind++] == '\0');
-      write(pipedes[1], writebuf+ind-1, strlen(writebuf)-ind+1);
+      fprintf(args->out_file, writebuf+ind-1);
     }
     else
     {
@@ -108,74 +103,6 @@ static void decrypt_rsa(args_t* args)
   }
 
 }
-
-#define BASE64_BUFSIZE 1024 * 1024
-
-static char base64_buf[BASE64_BUFSIZE];
-static char base64_out[(BASE64_BUFSIZE * 5) / 3];	// Technically 4/3 of input, but take some margin
-
-static int enc_base64 (FILE *fp)
-{
-  size_t nread;
-  size_t nout;
-	int ret = 1;
-	struct base64_state state;
-
-	base64_stream_encode_init(&state, 0);
-
-	while ((nread = fread(base64_buf, 1, BASE64_BUFSIZE, fp)) > 0) {
-		base64_stream_encode(&state, base64_buf, nread, base64_out, &nout);
-		if (nout) {
-			write(pipedes[1], base64_out, nout);
-		}
-		if (feof(fp)) {
-			break;
-		}
-	}
-	if (ferror(fp)) {
-		fprintf(stderr, "read error\n");
-		ret = 0;
-		goto out;
-	}
-	base64_stream_encode_final(&state, base64_out, &nout);
-
-	if (nout) {
-		write(pipedes[1], base64_out, nout);
-	}
-out:	fclose(fp);
-	return ret;
-}
-
-static int dec_base64 (FILE *fp)
-{
-  size_t nread;
-  size_t nout;
-	int ret = 1;
-	struct base64_state state;
-
-	base64_stream_decode_init(&state, 0);
-
-	while ((nread = read(pipedes[0], base64_buf, BASE64_BUFSIZE)) > 0) {
-		if (!base64_stream_decode(&state, base64_buf, nread, base64_out, &nout)) {
-			fprintf(stderr, "decoding error\n");
-			ret = 0;
-			goto out;
-		}
-		if (nout) {
-			fwrite(base64_out, nout, 1, fp);
-		}
-		if (feof(fp)) {
-			break;
-		}
-	}
-	if (ferror(fp)) {
-		fprintf(stderr, "read error\n");
-		ret = 0;
-	}
-out:	fclose(fp);
-	return ret;
-}
-
 
 int main(int argc, char *argv[])
 {
@@ -245,44 +172,17 @@ int main(int argc, char *argv[])
     printLastError("Invalid key file");
     exit(1);
   }
-
-  pid_t pid;
-  pipe(pipedes);
-
   if (args.is_decrypt)
   {
-    pid = fork();
-    if (pid > 0)
-    {
-      close(pipedes[0]); // close read
-      decrypt_rsa(&args);
-      close(pipedes[1]);
-    }
-    else
-    {
-      close(pipedes[1]); //close write
-      dec_base64(args.out_file);
-      close(pipedes[0]);
-    }
+    decrypt_file(&args);
   }
   else
   {
-    pid = fork();
-    if (pid > 0)
-    {
-      close(pipedes[0]); // close read
-      enc_base64(args.in_file);
-      close(pipedes[1]);
-    }
-    else
-    {
-      close(pipedes[1]); //close write
-      encrypt_rsa(&args);
-      close(pipedes[0]);
-    }
+    encrypt_file(&args);
   }
 
-  waitpid(pid, NULL, 0);
+  fclose(args.in_file);
+  fclose(args.out_file);
 
   return 0;
 }
